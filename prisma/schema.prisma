@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,4 +8,128 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Core schema models for MyHRBuddy ATS system
+
+model Position {
+  id           String        @id @default(uuid())
+  title        String
+  department   String
+  description  String?
+  requirements Json?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @default(now()) @map("updated_at")
+  applications Application[]
+
+  @@map("positions")
+}
+
+model Applicant {
+  id            String        @id @default(uuid())
+  firstName     String        @map("first_name")
+  lastName      String        @map("last_name")
+  email         String        @unique
+  phone         String?
+  location      String?
+  linkedinUrl   String?       @map("linkedin_url")
+  portfolioUrl  String?       @map("portfolio_url")
+  source        String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @map("updated_at")
+  applications  Application[]
+  skills        ApplicantSkill[]
+
+  @@map("applicants")
+  @@index([lastName, firstName])
+  @@index([email])
+}
+
+model Application {
+  id             String           @id @default(uuid())
+  applicantId    String           @map("applicant_id")
+  positionId     String           @map("position_id")
+  status         String           @default("new")
+  appliedAt      DateTime         @default(now()) @map("applied_at")
+  updatedAt      DateTime         @default(now()) @map("updated_at")
+  coverLetter    String?          @map("cover_letter")
+  zapierFormData Json?            @map("zapier_form_data")
+  applicant      Applicant        @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  position       Position         @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  files          File[]
+  aiAnalyses     AIAnalysis[]
+  stages         ApplicationStage[]
+
+  @@unique([applicantId, positionId])
+  @@map("applications")
+  @@index([status])
+  @@index([positionId])
+}
+
+model File {
+  id              String      @id @default(uuid())
+  applicationId   String      @map("application_id")
+  fileName        String      @map("file_name")
+  fileType        String      @map("file_type")
+  fileSize        Int         @map("file_size")
+  storagePath     String      @map("storage_path")
+  storageProvider String      @default("vercel_blob") @map("storage_provider")
+  uploadedAt      DateTime    @default(now()) @map("uploaded_at")
+  fileCategory    String      @map("file_category")
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("files")
+  @@index([applicationId, fileCategory])
+}
+
+model Skill {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  category  String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  applicants ApplicantSkill[]
+
+  @@map("skills")
+  @@index([name])
+}
+
+model ApplicantSkill {
+  id               String    @id @default(uuid())
+  applicantId      String    @map("applicant_id")
+  skillId          String    @map("skill_id")
+  yearsExperience  Int?      @map("years_experience")
+  proficiencyLevel String?   @map("proficiency_level")
+  isHighlighted    Boolean   @default(false) @map("is_highlighted")
+  isAiDetected     Boolean   @default(false) @map("is_ai_detected")
+  applicant        Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  skill            Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantId, skillId])
+  @@map("applicant_skills")
+  @@index([applicantId, skillId])
+}
+
+model AIAnalysis {
+  id              String      @id @default(uuid())
+  applicationId   String      @map("application_id")
+  analysisType    String      @map("analysis_type")
+  analysisResult  Json        @map("analysis_result")
+  confidenceScore Float?      @map("confidence_score")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  modelVersion    String?     @map("model_version")
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("ai_analyses")
+}
+
+model ApplicationStage {
+  id            String      @id @default(uuid())
+  applicationId String      @map("application_id")
+  stage         String
+  notes         String?
+  changedAt     DateTime    @default(now()) @map("changed_at")
+  changedBy     String?     @map("changed_by")
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("application_stages")
 }
