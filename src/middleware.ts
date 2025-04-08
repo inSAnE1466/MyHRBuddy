@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { auth } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
   // Skip authentication for the Zapier webhook endpoint
@@ -13,21 +13,21 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/' || 
     request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/favicon.ico') ||
-    request.nextUrl.pathname.startsWith('/api/auth')
+    request.nextUrl.pathname.startsWith('/api/auth') ||
+    request.nextUrl.pathname.startsWith('/login')
   ) {
     return NextResponse.next();
   }
 
+  const session = await auth();
+  
   // Check if this is an API route
   const isApiRoute = request.nextUrl.pathname.startsWith('/api');
 
-  // For API routes, check for JWT token
-  if (isApiRoute) {
-    // Get the token from the request if present
-    const token = await getToken({ req: request });
-
-    // If no token and not authorized route, return 401
-    if (!token) {
+  // If no session and trying to access a protected route
+  if (!session) {
+    if (isApiRoute) {
+      // For API routes, return 401 Unauthorized
       return new NextResponse(
         JSON.stringify({ error: 'Authentication required' }),
         {
@@ -37,15 +37,11 @@ export async function middleware(request: NextRequest) {
           },
         }
       );
-    }
-  } else {
-    // For non-API routes, redirect to login if not authenticated
-    const token = await getToken({ req: request });
-    
-    if (!token) {
-      const url = new URL('/api/auth/signin', request.url);
-      url.searchParams.set('callbackUrl', request.nextUrl.pathname);
-      return NextResponse.redirect(url);
+    } else {
+      // For non-API routes, redirect to login
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

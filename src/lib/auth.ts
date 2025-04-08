@@ -2,6 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import NextAuth from "next-auth";
 
 // Define a simple hardcoded user for initial setup
 // In production, replace with database-backed authentication
@@ -79,5 +80,8 @@ export const authConfig: NextAuthConfig = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'placeholder-secret-for-development',
 };
+
+// Export the NextAuth handler with the configuration
+export const { auth, signIn, signOut } = NextAuth(authConfig);
