@@ -3,6 +3,21 @@ import { prisma } from '@/lib/prisma';
 import { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import NextAuth from "next-auth";
+import { DefaultSession } from "next-auth";
+
+// Extend the DefaultSession interface to include custom properties
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      role?: string;
+    } & DefaultSession["user"];
+  }
+
+  interface JWT {
+    role?: string;
+  }
+}
 
 // Define a simple hardcoded user for initial setup
 // In production, replace with database-backed authentication
@@ -13,6 +28,7 @@ const users = [
     email: 'admin@myhrbuddy.com',
     // In a real app, this would be hashed
     password: 'admin1234', 
+    role: 'admin',
   },
 ];
 
@@ -43,6 +59,7 @@ export const authConfig: NextAuthConfig = {
           id: user.id,
           name: user.name,
           email: user.email,
+          role: user.role,
         };
       },
     }),
@@ -62,14 +79,15 @@ export const authConfig: NextAuthConfig = {
     },
     async jwt({ token, user }) {
       if (user) {
-        token.role = 'admin'; // For simplicity, everyone is admin
+        token.role = user.role || 'user';
+        token.sub = user.id;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role;
       }
       return session;
     },
