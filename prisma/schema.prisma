@@ -26,19 +26,25 @@ model Position {
 }
 
 model Applicant {
-  id            String        @id @default(uuid())
-  firstName     String        @map("first_name")
-  lastName      String        @map("last_name")
-  email         String        @unique
-  phone         String?
-  location      String?
-  linkedinUrl   String?       @map("linkedin_url")
-  portfolioUrl  String?       @map("portfolio_url")
-  source        String?
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @default(now()) @map("updated_at")
-  applications  Application[]
-  skills        ApplicantSkill[]
+  id                String        @id @default(uuid())
+  firstName         String        @map("first_name") // From "Name" field
+  lastName          String?       @map("last_name")  // In case name is split
+  email             String        @unique            // From "Email" field
+  phone             String?                          // From "Phone" field
+  location          String?                          // Optional location
+  availableToStart  DateTime?     @map("available_to_start") // From date field
+  canStartImmediately Boolean     @default(false)   // From checkbox field
+  socialLinks       String?       @map("social_links") // From "Social Links" field
+  skillsToContribute String?      @map("skills_to_contribute") // From skills question 
+  proudestProjects  String?       @map("proudest_projects") // From projects question
+  excitementReason  String?       @map("excitement_reason") // From excitement question
+  linkedinUrl       String?       @map("linkedin_url")
+  portfolioUrl      String?       @map("portfolio_url")
+  source            String?
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @default(now()) @map("updated_at")
+  applications      Application[]
+  skills            ApplicantSkill[]
 
   @@map("applicants")
   @@index([lastName, firstName])

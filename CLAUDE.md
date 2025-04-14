@@ -1,117 +1,210 @@
-# MyHRBuddy: AI-Powered ATS System
+MyHRBuddy: AI-Powered ATS System
+Project Overview
+MyHRBuddy is an AI-powered Applicant Tracking System (ATS) that enables HR teams to intelligently search, filter, and analyze job applicants. The system integrates with ClickUp for applicant tracking, uses Gemini AI for intelligent analysis, and provides a Next.js frontend for HR professionals to manage the hiring process.
+Tech Stack
 
-## Project Overview
+Frontend: Next.js 15.2 with App Router, React 19, Tailwind CSS, shadcn/ui
+Backend: Next.js API routes, TypeScript
+Database: Neon PostgreSQL with Prisma ORM
+Authentication: NextAuth.js with Google/Gmail provider
+File Storage: Vercel Blob Storage
+AI Integration: Gemini 2.0 Flash
+MCP Integrations:
 
-MyHRBuddy is an AI-powered Applicant Tracking System (ATS) that enables HR teams to intelligently search, filter, and analyze job applicants. The system integrates with Zapier forms to collect applicant data, uses Gemini AI for intelligent analysis, and provides a Next.js frontend for HR professionals to manage the hiring process.
+ClickUp MCP Server (remote on Cloudflare)
+Gmail MCP Server (remote on Cloudflare)
+Neon DB MCP Server (remote on Cloudflare)
 
-## Tech Stack
 
-- **Frontend**: Next.js 15.2 with App Router, React 19, Tailwind CSS, shadcn/ui
-- **Backend**: Next.js API routes, TypeScript
-- **Database**: Neon PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js
-- **File Storage**: Vercel Blob Storage
-- **AI Integration**: Gemini Flash 2.0
-- **Deployment**: Vercel
+Deployment: Vercel (application), Cloudflare Workers (MCP servers)
 
-## Architecture Overview
+Architecture Overview
+Form Submission → ClickUp → MCP Integration → Database → AI Analysis → Frontend UI → Email Notifications
+Core Components
 
-```
-Zapier Form Submission → Next.js API → Database → AI Analysis → Frontend UI
-```
+ClickUp Integration:
 
-## Core Components
+Source of applicant data through ClickUp API
+Task management for applicant tracking
+Remote MCP server for AI interaction with ClickUp
 
-1. **Zapier Integration**: Webhook to receive form submissions including resume files
-2. **Database Schema**: PostgreSQL tables for applicants, positions, applications, files, skills, etc.
-3. **AI Analysis Engine**: Gemini-powered resume parsing, skill extraction, and matching
-4. **Frontend Dashboard**: Search, filter, and visualize applicant data
 
-## Environment Variables
+Gmail Integration:
 
-Required environment variables:
-- `DATABASE_URL`: Neon PostgreSQL connection string
-- `GEMINI_API_KEY`: Google Gemini API key
-- `NEXTAUTH_SECRET`: Secret for NextAuth authentication
-- `ZAPIER_WEBHOOK_SECRET`: Secret for Zapier webhook authentication
-- `BLOB_READ_WRITE_TOKEN`: Vercel Blob Storage token
+Email notifications for applicants and HR staff
+Email template management
+Remote MCP server for AI interaction with Gmail
 
-## Development Commands
 
-- `npm run dev`: Start development server
-- `npm run build`: Build for production
-- `npm run start`: Start production server
-- `npm run lint`: Run ESLint
-- `npx prisma db push`: Push schema changes to database
-- `npx prisma studio`: Visual database explorer
+Database Layer:
 
-## Project Structure
+Neon PostgreSQL for data storage
+Prisma ORM for database access
+Remote MCP server for AI interaction with the database
 
-- `src/app/api`: API routes for backend functionality
-  - `/api/webhooks/zapier`: Webhook endpoint for Zapier integration
-  - `/api/applicants`: CRUD endpoints for applicants
-  - `/api/search`: Natural language search processing
-  - `/api/analysis`: AI analysis of applicants and resumes
-- `src/lib`: Utility functions and shared libraries
-  - `prisma.ts`: Prisma client initialization
-  - `file-storage.ts`: Vercel Blob Storage utilities
-  - `ai-service.ts`: Gemini AI integration
-  - `auth.ts`: NextAuth configuration
-- `prisma`: Database schema and migrations
-  - `schema.prisma`: Database models definition
 
-## Completed Backend Setup
+AI Analysis Engine:
 
-1. **Prisma Schema**:
-   - Created models for applicants, positions, applications, files, skills, etc.
-   - Added indexes for improved query performance
-   - Set up relationships between models
+Gemini-powered resume parsing, skill extraction, and matching
+Natural language search capabilities
+AI-powered applicant evaluation
 
-2. **Zapier Integration**:
-   - Implemented webhook endpoint for receiving form submissions
-   - Added validation and error handling
-   - Created process for storing resume files
-   - Set up application tracking
 
-3. **AI Analysis**:
-   - Implemented Gemini AI integration for resume parsing
-   - Created natural language search processing
-   - Set up skills extraction and storage
+Authentication:
 
-4. **API Endpoints**:
-   - Created CRUD operations for applicants
-   - Implemented search API with natural language processing
-   - Added file storage and retrieval endpoints
+NextAuth.js with Google provider for secure authentication
+Role-based access control
+Secure API endpoints
 
-5. **Authentication**:
-   - Set up NextAuth.js with credential provider
-   - Implemented route protection via middleware
 
-## Next Steps
+Frontend Dashboard:
 
-1. **Frontend Development**:
-   - Create dashboard layout
-   - Implement applicant list and details views
-   - Build natural language search interface
-   - Develop visualizations for applicant data
+Intuitive UI for applicant management
+Natural language search interface
+Visualizations and reporting
 
-2. **Database Initialization**:
-   - Apply Prisma schema to Neon PostgreSQL
-   - Create initial seed data for testing
 
-3. **Deployment**:
-   - Configure Vercel project
-   - Set up environment variables
-   - Deploy application
 
-4. **Testing**:
-   - Create test data for API endpoints
-   - Test Zapier integration
-   - Verify AI analysis functionality
+MCP Integration
+The system uses Model Context Protocol (MCP) to enable AI assistants to interact with external services:
+ClickUp MCP Server
 
-## Integration Notes
+Deployed as a remote server on Cloudflare Workers
+Provides tools for task creation, updates, and management
+Connects to ClickUp API for applicant data retrieval and updates
+Enables natural language interaction with ClickUp tasks
 
-- The Zapier webhook expects data in a specific format as outlined in the documentation
-- Resume files should be uploaded as URLs or base64-encoded data
-- The Gemini AI model requires a valid API key and specific prompt structure
-- NextAuth is currently set up with a demo credential provider (replace with your preferred provider)
+Gmail MCP Server
+
+Deployed as a remote server on Cloudflare Workers
+Provides tools for email composition, sending, and management
+Connects to Gmail API for email communications
+Enables natural language generation of email content
+
+Neon DB MCP Server
+
+Deployed as a remote server on Cloudflare Workers
+Provides tools for database querying and updates
+Connects to Neon PostgreSQL for data operations
+Enables natural language querying of applicant data
+
+MCP Client Integration
+
+Web application connects to remote MCP servers via secure API
+Authentication handled through OAuth
+Enables AI assistant to perform actions on behalf of users
+
+Authentication System
+The authentication system uses NextAuth.js with Google provider:
+
+Login Flow: Simple "Sign in with Google" button
+User Management: Authorized users stored in database
+Role-Based Access: Admin and standard user roles
+Session Management: Secure session handling
+Protected Routes: API and page routes protected based on authentication
+
+Environment Variables
+# Database
+DATABASE_URL=your_neon_postgres_connection_string
+
+# Authentication
+NEXTAUTH_URL=your_app_url
+NEXTAUTH_SECRET=your_nextauth_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# AI
+GEMINI_API_KEY=your_gemini_api_key
+
+# MCP Servers
+CLICKUP_MCP_URL=your_clickup_mcp_url
+CLICKUP_MCP_TOKEN=your_clickup_mcp_token
+GMAIL_MCP_URL=your_gmail_mcp_url
+GMAIL_MCP_TOKEN=your_gmail_mcp_token
+NEON_MCP_URL=your_neon_mcp_url
+NEON_MCP_TOKEN=your_neon_mcp_token
+
+# ClickUp API
+CLICKUP_API_KEY=your_clickup_api_key
+
+# File Storage
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_token
+Implementation Plan
+Phase 1: Core Infrastructure
+
+Set up Prisma schema and database connection
+Implement NextAuth with Google provider
+Create basic dashboard layout
+
+Phase 2: ClickUp Integration
+
+Deploy ClickUp MCP server on Cloudflare
+Implement ClickUp API connection
+Create data sync between ClickUp and database
+
+Phase 3: AI Analysis Engine
+
+Implement Gemini AI integration
+Create resume parsing and skill extraction
+Build natural language search capabilities
+
+Phase 4: Email Integration
+
+Deploy Gmail MCP server on Cloudflare
+Implement email template system
+Create notification workflows
+
+Phase 5: Database Operations
+
+Deploy Neon DB MCP server on Cloudflare
+Implement data querying and manipulation tools
+Create reporting and analytics features
+
+Phase 6: UI/UX Refinement
+
+Enhance dashboard with visualizations
+Implement applicant comparison features
+Create user-friendly natural language interface
+
+Development Guidelines
+File Structure
+
+/app/(dashboard) - Dashboard and authenticated routes
+/app/api - API endpoints
+/app/login - Authentication pages
+/lib - Shared utilities and services
+/components - Reusable UI components
+/prisma - Database schema and migrations
+
+Best Practices
+
+Use TypeScript for type safety
+Leverage Next.js App Router features
+Implement proper error handling and logging
+Follow security best practices for authentication
+Use React Server Components where appropriate
+Create reusable components with shadcn/ui
+
+Testing Strategy
+
+Unit tests for utility functions
+Integration tests for API endpoints
+E2E tests for critical workflows
+Manual testing for UI components
+
+Deployment
+
+Application: Deploy to Vercel
+MCP Servers: Deploy to Cloudflare Workers using Wrangler
+Database: Hosted on Neon PostgreSQL
+Authentication: Configured with Google Cloud Console
+
+Next Steps
+
+Complete Prisma schema setup and database connection
+Implement NextAuth with Google provider
+Deploy remote MCP servers on Cloudflare
+Create MCP client integration in the application
+Implement ClickUp data synchronization
+Build out dashboard UI components
+Create AI-powered natural language search

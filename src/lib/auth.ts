@@ -5,6 +5,7 @@ import Credentials from 'next-auth/providers/credentials';
 import NextAuth from "next-auth";
 import { DefaultSession } from "next-auth";
 
+
 // Extend the DefaultSession interface to include custom properties
 declare module "next-auth" {
   interface Session {
@@ -79,7 +80,7 @@ export const authConfig: NextAuthConfig = {
     },
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role || 'user';
+        token.role = user || 'user';
         token.sub = user.id;
       }
       return token;
@@ -87,7 +88,7 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string;
-        session.user.role = token.role;
+        session.user.role = token.role as string | undefined;
       }
       return session;
     },

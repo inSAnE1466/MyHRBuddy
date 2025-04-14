@@ -1,187 +1,232 @@
 import React from 'react';
-import { Metadata } from 'next';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { prisma } from '@/lib/prisma';
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Applicant Details - MyHRBuddy',
-  description: 'View applicant details',
-};
 
-async function getApplicant(id: string) {
-  try {
-    const applicant = await prisma.applicant.findUnique({
-      where: { id },
-      include: {
-        applications: {
-          include: {
-            position: true,
-            files: true,
-          },
-        },
-        skills: {
-          include: {
-            skill: true,
-          },
-        },
-      },
-    });
-
-    if (!applicant) {
-      return null;
-    }
-
-    return applicant;
-  } catch (error) {
-    console.error('Error fetching applicant:', error);
-    return null;
-  }
+interface ApplicantPageParams {
+  params: {
+    id: string;
+  };
 }
 
-export default async function ApplicantDetailsPage({ params }: { params: { id: string } }) {
-  const applicant = await getApplicant(params.id);
-  
+
+// Generate metadata for the page
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const applicant = await prisma.applicant.findUnique({
+    where: { id: params.id },
+  });
+
+  if (!applicant) {
+    return {
+      title: 'Applicant Not Found - MyHRBuddy',
+    };
+  }
+
+  return {
+    title: `${applicant.firstName} ${applicant.lastName} - MyHRBuddy`,
+  };
+}
+
+async function getApplicantData(id: string) {
+  const applicant = await prisma.applicant.findUnique({
+    where: { id },
+    include: {
+      applications: {
+        include: {
+          position: true,
+          files: true,
+          aiAnalyses: {
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          },
+          stages: {
+            orderBy: {
+              changedAt: 'desc'
+            }
+          }
+        }
+      },
+      skills: {
+        include: {
+          skill: true
+        }
+      }
+    }
+  });
+
+  return applicant;
+}
+
+export default async function ApplicantPage({ params }: ApplicantPageParams) {
+  const applicant = await getApplicantData(params.id);
+
   if (!applicant) {
     notFound();
   }
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
+  // Get the most recent application and its data
+  const latestApplication = applicant.applications[0];
+  const resumeAnalysis = latestApplication?.aiAnalyses[0];
+  const currentStage = latestApplication?.stages[0]?.stage || 'New';
+  
   return (
     <div className="container py-10">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <Link href="/applicants" className="text-sm text-muted-foreground hover:text-primary">
-            ← Back to Applicants
+      <div className="mb-6">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/applicants">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Applicants
           </Link>
-        </div>
+        </Button>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1">
+
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">
+            {applicant.firstName} {applicant.lastName}
+          </h1>
+          <div className="flex items-center mt-2 text-muted-foreground">
+            <Mail className="h-4 w-4 mr-2" />
+            <span>{applicant.email}</span>
+          </div>
+          {applicant.phone && (
+            <div className="flex items-center mt-1 text-muted-foreground">
+              <Phone className="h-4 w-4 mr-2" />
+              <span>{applicant.phone}</span>
+            </div>
+          )}
+          {applicant.location && (
+            <div className="flex items-center mt-1 text-muted-foreground">
+              <MapPin className="h-4 w-4 mr-2" />
+              <span>{applicant.location}</span>
+            </div>
+          )}
+        </div>
+        
+        <Badge className="text-sm">
+          {currentStage}
+        </Badge>
+      </div>
+
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="resume">Resume</TabsTrigger>
+          <TabsTrigger value="skills">Skills</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="mt-6">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Profile</CardTitle>
-              <CardDescription>Applicant's basic information</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center">
-              <Avatar className="h-24 w-24 mb-4">
-                <AvatarFallback className="text-xl">
-                  {getInitials(applicant.firstName, applicant.lastName)}
-                </AvatarFallback>
-              </Avatar>
-              <h2 className="text-xl font-bold">{applicant.firstName} {applicant.lastName}</h2>
-              <p className="text-muted-foreground">{applicant.email}</p>
-              {applicant.phone && <p className="text-muted-foreground">{applicant.phone}</p>}
-              <div className="mt-4 w-full">
-                {applicant.applications.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-2">Applied For</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {applicant.applications.map((app) => (
-                        <Badge key={app.id} variant="outline">
-                          {app.position.title}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="mt-4">
-            <CardHeader className="pb-2">
-              <CardTitle>Skills</CardTitle>
-              <CardDescription>Applicant's skills and expertise</CardDescription>
+            <CardHeader>
+              <CardTitle>Application Details</CardTitle>
             </CardHeader>
             <CardContent>
-              {applicant.skills.length === 0 ? (
-                <p className="text-muted-foreground text-center">No skills listed</p>
+              {latestApplication ? (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium">Position</h3>
+                    <p>{latestApplication.position.title}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-medium">Applied On</h3>
+                    <p>{new Date(latestApplication.appliedAt).toLocaleDateString()}</p>
+                  </div>
+                  
+                  {applicant.availableToStart && (
+                    <div>
+                      <h3 className="font-medium">Available to Start</h3>
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>{new Date(applicant.availableToStart).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {applicant.excitementReason && (
+                    <div>
+                      <h3 className="font-medium">Why Excited About This Role</h3>
+                      <p>{applicant.excitementReason}</p>
+                    </div>
+                  )}
+                </div>
               ) : (
+                <p>No application data available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="resume" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Resume</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {latestApplication?.files.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <FileText className="h-5 w-5 mr-2" />
+                    <span>{latestApplication.files[0].fileName}</span>
+                    
+                    <Button asChild variant="outline" size="sm" className="ml-4">
+                      <a href={latestApplication.files[0].storagePath} target="_blank" rel="noopener noreferrer">
+                        View Resume
+                      </a>
+                    </Button>
+                  </div>
+                  
+                  {resumeAnalysis && (
+                    <div className="mt-8">
+                      <h3 className="font-medium mb-3">AI Analysis</h3>
+                      <div className="prose max-w-none">
+                        <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96">
+                          {JSON.stringify(resumeAnalysis.analysisResult, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p>No resume uploaded</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="skills" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Skills</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {applicant.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {applicant.skills.map((skill) => (
-                    <Badge key={skill.skillId} variant="secondary">
+                    <Badge key={skill.skillId} variant="secondary" className="px-3 py-1">
                       {skill.skill.name}
+                      {skill.yearsExperience && ` (${skill.yearsExperience} years)`}
                     </Badge>
                   ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-        
-        <div className="md:col-span-2">
-          <Card className="mb-4">
-            <CardHeader className="pb-2">
-              <CardTitle>Applications</CardTitle>
-              <CardDescription>Details of applicant's job applications</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {applicant.applications.length === 0 ? (
-                <p className="text-muted-foreground text-center">No applications found</p>
               ) : (
-                <div className="space-y-4">
-                  {applicant.applications.map((app) => (
-                    <div key={app.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between mb-2">
-                        <h3 className="font-semibold">{app.position.title}</h3>
-                        <Badge variant={
-                          app.status === 'PENDING' ? 'warning' :
-                          app.status === 'REVIEWING' ? 'info' :
-                          app.status === 'ACCEPTED' ? 'success' :
-                          'outline'
-                        }>
-                          {app.status}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Applied on {new Date(app.createdAt).toLocaleDateString()}
-                      </p>
-                      <div className="flex gap-2 flex-wrap mt-4">
-                        {app.files.map((file) => (
-                          <Button key={file.id} variant="outline" size="sm" asChild>
-                            <a href={file.url} target="_blank" rel="noopener noreferrer">
-                              View {file.type}
-                            </a>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <p>No skills information available</p>
               )}
             </CardContent>
           </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle>Notes & Analysis</CardTitle>
-              <CardDescription>AI-generated insights and notes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {applicant.aiAnalysis ? (
-                <div className="prose prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: applicant.aiAnalysis }} />
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground mb-2">No AI analysis available yet</p>
-                  <Button variant="outline" size="sm">
-                    Generate Analysis
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        </TabsContent>
+      </Tabs>
+      
+      <div className="mt-8 flex space-x-4">
+        <Button>Move to Next Stage</Button>
+        <Button variant="outline">Send Email</Button>
       </div>
     </div>
   );
