@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { prisma } from '@/lib/prisma';
+import { getInitials } from '@/lib/utils/format';
 import { Users, Briefcase, FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -69,10 +70,6 @@ async function getBasicStats() {
 
 export default async function DashboardPage() {
   const { applicantCount, applicationCount, positionCount, recentApplicants } = await getBasicStats();
-
-  const getInitials = (firstName: string, lastName: string | null = null) => {
-    return `${firstName.charAt(0)}${lastName ? lastName.charAt(0) : ''}`.toUpperCase();
-  };
 
   return (
     <div className="container py-10">

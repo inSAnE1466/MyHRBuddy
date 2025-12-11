@@ -12,15 +12,12 @@ export async function saveFile(
   fileName: string,
   applicationId: string
 ): Promise<string> {
-  // Create a unique path for the file that includes the application ID
   const uniquePath = `applications/${applicationId}/${Date.now()}-${fileName}`;
-  
-  // Upload to Vercel Blob
-  const blob = await put(uniquePath, fileBuffer, {
-    access: 'private',
+
+  const blob = await put(uniquePath, Buffer.from(fileBuffer), {
+    access: 'public',
   });
-  
-  // Return the path (URL) to the stored file
+
   return blob.url;
 }
 
@@ -44,16 +41,6 @@ export async function listApplicationFiles(applicationId: string) {
   return blobs;
 }
 
-/**
- * Generates a presigned URL for secure file access
- * @param storagePath - The complete URL of the file
- * @param expirationSeconds - How long the URL should be valid (default: 3600s/1hr)
- */
-export async function getFileAccessUrl(
-  storagePath: string,
-  expirationSeconds = 3600
-): Promise<string> {
-  // For Vercel Blob, we can just return the URL since it's already secure
-  // If implementing with S3 or other providers, you'd generate a presigned URL here
+export async function getFileAccessUrl(storagePath: string): Promise<string> {
   return storagePath;
 }

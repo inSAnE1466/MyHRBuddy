@@ -1,12 +1,8 @@
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import { prisma } from '@/lib/prisma';
 import { NextAuthConfig } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import NextAuth from "next-auth";
 import { DefaultSession } from "next-auth";
 
-
-// Extend the DefaultSession interface to include custom properties
 declare module "next-auth" {
   interface Session {
     user: {
@@ -15,27 +11,26 @@ declare module "next-auth" {
     } & DefaultSession["user"];
   }
 
+  interface User {
+    role?: string;
+  }
+
   interface JWT {
     role?: string;
   }
 }
 
-// Define a simple hardcoded user for initial setup
-// In production, replace with database-backed authentication
 const users = [
   {
     id: '1',
     name: 'Admin User',
     email: 'admin@myhrbuddy.com',
-    // In a real app, this would be hashed
-    password: 'admin1234', 
+    password: 'admin1234',
     role: 'admin',
   },
 ];
 
 export const authConfig: NextAuthConfig = {
-  // Configure one or more authentication providers
-  adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({
       name: 'Credentials',
@@ -44,8 +39,6 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // This is where you would typically check against your database
-        // For demo purposes, we're using hardcoded values
         if (!credentials?.email || !credentials.password) {
           return null;
         }
@@ -72,15 +65,15 @@ export const authConfig: NextAuthConfig = {
       
       if (isOnDashboard) {
         if (isLoggedIn) return true;
-        return false; // Redirect to login
+        return false;
       } else if (isLoggedIn) {
         return true;
       }
-      return true; // Allow public access to other pages
+      return true;
     },
     async jwt({ token, user }) {
       if (user) {
-        token.role = user || 'user';
+        token.role = user.role || 'user';
         token.sub = user.id;
       }
       return token;

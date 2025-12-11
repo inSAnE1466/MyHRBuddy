@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { getInitials } from '@/lib/utils/format';
 import { Search, FileText } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -34,10 +35,6 @@ async function getApplicants() {
 
 export default async function ApplicantsPage() {
   const applicants = await getApplicants();
-  
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
 
   return (
     <div className="container py-10">

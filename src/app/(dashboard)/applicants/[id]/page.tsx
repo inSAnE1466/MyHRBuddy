@@ -10,16 +10,15 @@ import { ArrowLeft, Mail, Phone, MapPin, Calendar, FileText } from 'lucide-react
 
 
 interface ApplicantPageParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-
-// Generate metadata for the page
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: ApplicantPageParams) {
+  const { id } = await params;
   const applicant = await prisma.applicant.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
 
   if (!applicant) {
@@ -66,7 +65,8 @@ async function getApplicantData(id: string) {
 }
 
 export default async function ApplicantPage({ params }: ApplicantPageParams) {
-  const applicant = await getApplicantData(params.id);
+  const { id } = await params;
+  const applicant = await getApplicantData(id);
 
   if (!applicant) {
     notFound();

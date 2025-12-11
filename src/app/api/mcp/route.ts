@@ -1,19 +1,12 @@
-// src/app/api/mcp/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { mcpService } from '@/lib/mcp-service';
 import { z } from 'zod';
 
-// Type for the service operations
-type ServiceOperation = {
-  [key: string]: (...args: any[]) => Promise<any>;
-};
-
-// Validation schema for MCP request
 const McpRequestSchema = z.object({
   service: z.enum(['clickup', 'neon']),
   operation: z.string(),
-  params: z.record(z.any()).optional(),
+  params: z.record(z.unknown()).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,36 +35,23 @@ export async function POST(request: NextRequest) {
     }
     
     const { service, operation, params = {} } = validationResult.data;
-    
-    // 3. Execute the operation using our MCP service
-    let serviceObj: ServiceOperation;
-    
-    switch (service) {
-      case 'clickup':
-        serviceObj = mcpService.clickup;
-        break;
-        
-      case 'neon':
-        serviceObj = mcpService.neon;
-        break;
-        
-      default:
-        return NextResponse.json(
-          { error: `Unknown service: ${service}` },
-          { status: 400 }
-        );
-    }
-    
-    // Check if the operation exists
-    if (typeof serviceObj[operation] !== 'function') {
+
+    const services = {
+      clickup: mcpService.clickup,
+      neon: mcpService.neon
+    };
+
+    const serviceObj = services[service];
+    const operationFn = (serviceObj as Record<string, unknown>)[operation];
+
+    if (typeof operationFn !== 'function') {
       return NextResponse.json(
         { error: `Unknown operation: ${operation} for service: ${service}` },
         { status: 400 }
       );
     }
-    
-    // Execute the operation
-    const result = await serviceObj[operation](params);
+
+    const result = await operationFn(params);
     
     // 4. Return the result
     return NextResponse.json({

@@ -1,14 +1,34 @@
-// src/lib/ai-service.ts
 import { GoogleGenerativeAI, GenerativeModel, GenerationConfig } from '@google/generative-ai';
 import { mcpService } from './mcp-service';
 import { prisma } from './prisma';
+import { Applicant, Application, Position, Skill } from '@prisma/client';
 import * as clickupMcp from './clickup-mcp';
 import { sendEmail } from './email-service';
 
-// Initialize Gemini API
+type ResumeAnalysis = {
+  skills?: string[];
+  yearsOfExperience?: number;
+  education?: string;
+  previousRoles?: Array<{ title: string; company: string }>;
+  assessment?: string;
+  rawAnalysis?: string;
+  error?: string;
+  rawOutput?: string;
+};
+
+type ApplicantSummaryResult = {
+  html: string;
+  generatedAt: string;
+  modelVersion: string;
+};
+
+type ApplicantWithRelations = Applicant & {
+  applications: (Application & { position: Position })[];
+  skills: Array<{ skill: Skill; skillId: string; applicantId: string }>;
+};
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-// Default configuration for Gemini model
 const defaultGenerationConfig: GenerationConfig = {
   temperature: 0.7,
   topP: 0.95,
@@ -16,7 +36,6 @@ const defaultGenerationConfig: GenerationConfig = {
   maxOutputTokens: 2048,
 };
 
-// Get the Gemini model
 function getModel(modelName = "gemini-2.0-flash"): GenerativeModel {
   return genAI.getGenerativeModel({
     model: modelName,
@@ -24,9 +43,6 @@ function getModel(modelName = "gemini-2.0-flash"): GenerativeModel {
   });
 }
 
-/**
- * Generate email content using Gemini AI
- */
 export async function generateEmailContent(params: {
   applicantName: string;
   positionTitle: string;
@@ -34,8 +50,7 @@ export async function generateEmailContent(params: {
   customMessage?: string;
 }): Promise<string> {
   const model = getModel();
-  
-  // Create prompt for Gemini
+
   const prompt = `
     Write a professional email to an applicant named ${params.applicantName} 
     regarding their application for the ${params.positionTitle} position.
@@ -45,21 +60,16 @@ export async function generateEmailContent(params: {
     The email should be professional, concise, and provide clear next steps.
     Format the email with appropriate HTML tags (<p>, <h2>, etc.) for display in an email client.
   `;
-  
-  // Generate content
+
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   
   return text;
 }
 
-/**
- * Analyze a resume using Gemini AI
- */
-export async function analyzeResume(resumeText: string): Promise<any> {
+export async function analyzeResume(resumeText: string): Promise<ResumeAnalysis> {
   const model = getModel();
-  
-  // Create prompt for Gemini
+
   const prompt = `
     Analyze the following resume and extract key information:
     
@@ -72,53 +82,42 @@ export async function analyzeResume(resumeText: string): Promise<any> {
     4. Previous job titles and companies
     5. A brief assessment of their qualifications
   `;
-  
-  // Generate content
+
   const result = await model.generateContent(prompt);
   const text = result.response.text();
-  
-  // Extract and parse JSON from the response
+
   try {
-    // Find JSON in the response
-    const jsonMatch = text.match(/```json([\s\S]*?)```/) || 
-                     text.match(/{[\s\S]*}/);
-    
+    const jsonMatch = text.match(/```json([\s\S]*?)```/) || text.match(/{[\s\S]*}/);
+
     if (jsonMatch) {
       const jsonStr = jsonMatch[0].replace(/```json|```/g, '').trim();
       return JSON.parse(jsonStr);
-    } else {
-      // If no JSON format is found, return the text as-is
-      return { rawAnalysis: text };
     }
+    return { rawAnalysis: text };
   } catch (error) {
     console.error('Error parsing resume analysis:', error);
-    return { 
+    return {
       error: 'Failed to parse analysis',
-      rawOutput: text 
+      rawOutput: text
     };
   }
 }
 
-/**
- * Generate an applicant summary using Gemini AI
- */
-export async function generateApplicantSummary(applicant: any): Promise<any> {
+export async function generateApplicantSummary(applicant: ApplicantWithRelations): Promise<ApplicantSummaryResult> {
   const model = getModel();
-  
-  // Extract application info
-  const application = applicant.applications[0] || {};
-  const position = application.position || { title: 'Unknown position' };
-  const skills = applicant.skills.map((s: any) => s.skill.name).join(', ');
-  
-  // Create prompt for Gemini
+
+  const application = applicant.applications[0];
+  const position = application?.position;
+  const skills = applicant.skills.map(s => s.skill.name).join(', ');
+
   const prompt = `
     Generate a comprehensive HTML summary for the following job applicant:
-    
+
     Name: ${applicant.firstName} ${applicant.lastName || ''}
     Email: ${applicant.email}
     Phone: ${applicant.phone || 'Not provided'}
     Location: ${applicant.location || 'Not provided'}
-    Position Applied For: ${position.title}
+    Position Applied For: ${position?.title || 'Not specified'}
     Skills: ${skills || 'None specified'}
     LinkedIn: ${applicant.linkedinUrl || 'Not provided'}
     Portfolio: ${applicant.portfolioUrl || 'Not provided'}
@@ -129,8 +128,7 @@ export async function generateApplicantSummary(applicant: any): Promise<any> {
     - A brief assessment of their fit for the position
     - Styling with appropriate CSS classes (we use Tailwind CSS)
   `;
-  
-  // Generate content
+
   const result = await model.generateContent(prompt);
   const htmlSummary = result.response.text();
   
@@ -141,19 +139,14 @@ export async function generateApplicantSummary(applicant: any): Promise<any> {
   };
 }
 
-/**
- * Process applicant workflow using MCP and Gemini AI
- * This function demonstrates the integration between Gemini AI and MCP
- */
 export async function processApplicantWorkflow(params: {
   applicantId: string;
   positionTitle: string;
   stage: string;
   comments?: string;
   listId: string;
-}): Promise<any> {
+}): Promise<{ success: boolean; taskCreated?: boolean; emailSent?: boolean; error?: string }> {
   try {
-    // 1. Get applicant data
     const applicant = await prisma.applicant.findUnique({
       where: { id: params.applicantId },
       include: {
@@ -168,19 +161,16 @@ export async function processApplicantWorkflow(params: {
     if (!applicant) {
       throw new Error('Applicant not found');
     }
-    
-    // 2. Initialize MCP Service if not already initialized
+
     await mcpService.initialize();
-    
-    // 3. Use Gemini to generate content
+
     const emailHtml = await generateEmailContent({
       applicantName: `${applicant.firstName} ${applicant.lastName || ''}`,
       positionTitle: params.positionTitle,
       stage: params.stage,
       customMessage: params.comments
     });
-    
-    // 4. Create task in ClickUp via MCP
+
     const createTaskParams: clickupMcp.CreateTaskParams = {
       list_id: params.listId,
       name: `Applicant: ${applicant.firstName} ${applicant.lastName || ''}`,
@@ -189,16 +179,14 @@ export async function processApplicantWorkflow(params: {
     };
     
     const taskResult = await mcpService.clickup.createTask(createTaskParams);
-    
-    // 5. Send email via SendGrid instead of Gmail MCP
+
     await sendEmail({
       to: applicant.email,
       subject: `Your Application Status: ${params.positionTitle}`,
       html: emailHtml,
       from: process.env.SENDGRID_FROM_EMAIL || 'hr@myhrbuddy.com'
     });
-    
-    // 6. Log activity to database
+
     await prisma.applicationStage.create({
       data: {
         applicationId: applicant.applications[0].id,
@@ -207,17 +195,17 @@ export async function processApplicantWorkflow(params: {
         changedBy: 'system'
       }
     });
-    
-    return { 
+
+    return {
       success: true,
       taskCreated: !!taskResult,
       emailSent: true
     };
   } catch (error) {
     console.error('Error in workflow:', error);
-    return { 
-      success: false, 
-      error: (error as Error).message 
+    return {
+      success: false,
+      error: (error as Error).message
     };
   }
 }

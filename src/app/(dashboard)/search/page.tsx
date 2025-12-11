@@ -7,11 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getInitials } from '@/lib/utils/format';
+
+type SearchResult = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  applications: Array<{ id: string; position: { title: string } }>;
+  skills: Array<{ skillId: string; skill: { name: string } }>;
+  matchScore?: number;
+};
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -42,10 +53,6 @@ export default function SearchPage() {
     } finally {
       setIsSearching(false);
     }
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
   return (
@@ -146,7 +153,7 @@ export default function SearchPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {applicant.applications.map((app: any) => (
+                        {applicant.applications.map(app => (
                           <Badge key={app.id} variant="outline" className="text-xs">
                             {app.position.title}
                           </Badge>
@@ -155,7 +162,7 @@ export default function SearchPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {applicant.skills.slice(0, 3).map((skill: any) => (
+                        {applicant.skills.slice(0, 3).map(skill => (
                           <Badge key={skill.skillId} variant="secondary" className="text-xs">
                             {skill.skill.name}
                           </Badge>

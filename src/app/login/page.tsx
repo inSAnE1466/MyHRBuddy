@@ -1,19 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Metadata } from 'next';
+import React, { useState, Suspense } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Sign In - MyHRBuddy',
-  description: 'Sign in to MyHRBuddy ATS system',
-};
-
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -41,7 +35,7 @@ export default function LoginPage() {
         // Redirect is handled by NextAuth
         window.location.href = callbackUrl;
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred during sign in');
       setIsLoading(false);
     }
@@ -123,5 +117,17 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
